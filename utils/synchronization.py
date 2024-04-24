@@ -6,16 +6,21 @@ import os
 from typing import Any
 from hypyp import analyses
 
+from itertools import combinations
+
 from config import (
+    N_TRIALS,
+    N_BLOCKS,
     CHANNELS_LIST,
     SAMPLING_FREQ,
     FREQ_BANDS,
+    FLICKER_FREQ,
     TMIN,
     TMAX,
-    BASELINE,
     RECORD,
     EXP_NAME,
     USERS,
+    TRIAL_LEN,
 )
 
 
@@ -54,7 +59,6 @@ class Synchronization:
         self._params["freq_bands"] = FREQ_BANDS
         self._params["tmin"] = TMIN
         self._params["tmax"] = TMAX
-        self._params["baseline"] = BASELINE
         self._params["users"] = USERS
 
     def update_users(self):
@@ -83,12 +87,12 @@ class Synchronization:
 
         if len(self._mne_data) != 0:
             print("\n")
-            print({"mne_data": self._mne_data})
+            # print({"mne_data": self._mne_data})
         else:
             print("No data found")
 
     def get_current_events(self, events):
-        current_events = events[-TRIALS_PER_BLOCK:]
+        current_events = events[-N_TRIALS:]
 
         return current_events
 
@@ -101,10 +105,11 @@ class Synchronization:
                     event_id=ev_id,
                     tmin=self._params["tmin"],
                     tmax=self._params["tmax"],
-                    baseline=self._params["baseline"],
+                    baseline=None,
                     preload=True,
                     verbose=False,
                     picks=self._params["channels_list"],
+                    detrend=1,
                 )
             }
         )
@@ -123,6 +128,7 @@ class Synchronization:
 
                 if events is not None:
                     current_events = self.get_current_events(events)
+
                     try:
                         self._current_epochs.append(
                             {
@@ -134,7 +140,7 @@ class Synchronization:
                                     event_id=ev_id,
                                     tmin=self._params["tmin"],
                                     tmax=self._params["tmax"],
-                                    baseline=self._params["baseline"],
+                                    baseline=None,
                                     preload=True,
                                     verbose=False,
                                     picks=self._params["channels_list"],
@@ -155,7 +161,7 @@ class Synchronization:
                                             event_id={key: value},
                                             tmin=self._params["tmin"],
                                             tmax=self._params["tmax"],
-                                            baseline=self._params["baseline"],
+                                            baseline=None,
                                             preload=True,
                                             verbose=False,
                                             picks=self._params["channels_list"],
@@ -208,27 +214,26 @@ class Synchronization:
         )
 
         sync_mat = connectivity_matrix[:, :, 0:2, 2:4]
-        sync_list = self._res(sync_mat)
+        sync_list = self.res(sync_mat)
 
         sync = np.round(np.mean(sync_list[0]), 2)
         sync_std = np.round(np.std(sync_list[0]), 2)
 
         return sync, sync_std
 
-    def sync_results(self, parameter, frequencies=None, epochs=None, trial=-1):
+    def sync_results(self, parameter="coh", frequencies=None, epochs=None, trial=-1):
         epochs = self._concatenated_epochs if epochs is None else epochs
         frequencies = self._params["freq_bands"] if frequencies is None else frequencies
 
         df = pd.DataFrame(
             columns=[
-                "Frequency rates",
+                "Stimulus frequency",
                 "Trial length",
                 "Num of trials per block",
                 "Num of blocks",
                 "Users",
                 "Channels",
                 "Sampling frequency",
-                "Calculations for",
                 "Frequency bands",
                 "Subjects",
                 "Trial no",
@@ -246,42 +251,40 @@ class Synchronization:
 
             subjects = [key for key in sub1.keys()] + [key for key in sub2.keys()]
 
-            for band in self._params["freq_bands"]:
-                try:
-                    subjects_data = [value[band] for value in sub1.values()] + [
-                        value[band] for value in sub2.values()
+            try:
+                subjects_data = [value["target"] for value in sub1.values()] + [
+                    value["target"] for value in sub2.values()
+                ]
+
+                sync, std = self.calculate_sync(
+                    parameter=parameter,
+                    frequencies=self._params["freq_bands"],
+                    epochs=subjects_data,
+                )
+                print(
+                    f"{self._params['users'][subjects[0]]} vs {self._params['users'][subjects[1]]} calculations: {sync} +- {std}"
+                )
+
+                if RECORD:
+                    print(">>> Writing results to file\n")
+                    df.loc[len(df.index)] = [
+                        FLICKER_FREQ,
+                        TRIAL_LEN,
+                        N_TRIALS,
+                        N_BLOCKS,
+                        self._params["users"],
+                        CHANNELS_LIST,
+                        SAMPLING_FREQ,
+                        self._params["freq_bands"],
+                        f"{self._params['users'][subjects[0]]} vs {self._params['users'][subjects[1]]}",
+                        trial,
+                        parameter,
+                        sync,
+                        std,
                     ]
-
-                    sync, std = self._calculate_sync(
-                        parameter=parameter,
-                        frequencies=self._params["freq_bands"][band],
-                        epochs=subjects_data,
-                    )
-                    # print(
-                    #     f"{self._params['users'][subjects[0]]} vs {self._params['users'][subjects[1]]} calculations for {band}: {sync} +- {std}"
-                    # )
-
-                    if RECORD:
-                        print(">>> Writing results to file\n")
-                        df.loc[len(df.index)] = [
-                            FREQ_RATES,
-                            TRIAL_LEN,
-                            TRIALS_PER_BLOCK,
-                            N_BLOCKS,
-                            self._params["users"],
-                            CHANNELS_LIST,
-                            SAMPLING_FREQ,
-                            band,
-                            self._params["freq_bands"][band],
-                            f"{self._params['users'][subjects[0]]} vs {self._params['users'][subjects[1]]}",
-                            trial,
-                            parameter,
-                            sync,
-                            std,
-                        ]
-                except KeyError as e:
-                    print(f"Error: {e}")
-                    continue
+            except KeyError as e:
+                print(f"Error: {e}")
+                continue
 
         if RECORD:
             print(">>> Saving file\n")

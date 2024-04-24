@@ -4,8 +4,10 @@ import time
 
 # Experiment parameters
 EXP_NAME = f'exp-{time.strftime("%Y%m%d-%H%M%S")}'
+TRIAL_LEN = 4
 FLICKER_FREQ = 12
-TRIALS_PER_BLOCK = 5
+N_TRIALS = 1
+N_BLOCKS = 1
 
 # Hyperscanning parameters
 CHANNELS_LIST = ["O1", "O2"]
@@ -13,7 +15,6 @@ SAMPLING_FREQ = 250
 FREQ_BANDS = {"freq_bands": [1, 40]}
 TMIN = 1
 TMAX = 4
-BASELINE = (0, 0)
 RECORD = False
 USERS = {}
 

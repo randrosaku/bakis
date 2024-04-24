@@ -1,5 +1,4 @@
 import logging
-from typing import Any
 
 from config import COMMAND
 
@@ -11,7 +10,6 @@ from baboard.utils.options import get_utils_dict
 class Model:
     def __init__(self, logger: logging.Logger):
         self.logger = logger
-        self.init_params()
         self.device_names: list[str] = []
         self.marker_names: list[str] = []
         self.get_db()
@@ -54,11 +52,6 @@ class Model:
         command = self.commands["stop_recording"].copy()
         self.board_control.command(command)
         self.logger.info(command["message"])
-
-    def init_params(self):
-        self.params: dict[str, Any] = {}
-        self.params["channels_list"] = ["O1", "O2"]
-        self.params["SR"] = 250
 
     def refresh_devices(self):
         self.get_db()

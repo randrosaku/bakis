@@ -7,74 +7,29 @@
 
 from psychopy import prefs
 from psychopy import plugins
-import time
 
 plugins.activatePlugins()
 prefs.hardware["audioLib"] = "ptb"
 prefs.hardware["audioLatencyMode"] = "3"
 
-from psychopy import visual, core, data, event, logging, clock, colors
+from psychopy import visual, core, data
 from psychopy.tools import environmenttools
 from psychopy.constants import (
     NOT_STARTED,
     STARTED,
-    STOPPED,
     FINISHED,
-    priority,
 )
 
 import os
-import numpy as np
 
 import psychopy.iohub as io
 from psychopy.hardware import keyboard
 
-from config import expName, FLICKER_FREQ
+from config import expName, FLICKER_FREQ, N_TRIALS, N_BLOCKS, TMAX
+from utils.synchronization import Synchronization
 
 result = -1
 _thisDir = os.path.dirname(os.path.abspath(__file__))
-
-fr_rate = 5
-fr_counter = 5
-
-
-class Stimulus:
-
-    def __init__(self, window, n_frame):
-        """
-        Args:
-        window (psychopy.visual.window): Psychopy window
-        position (tuple): Position of stimulus on the screen
-        size (int): Size of the stimulus
-        n_frame (int): Number of frames for the stim to flicker (frequency = monitor_refresh_rate/n_frame)
-        """
-        self._window = window
-        self._fr_rate = n_frame
-        self._fr_counter = n_frame
-
-        self.stim = visual.ShapeStim(
-            win=self._window,
-            name="stimuli",
-            size=(0.025, 0.025),
-            vertices="circle",
-            ori=0.0,
-            pos=(0, 0),
-            anchor="center",
-            lineWidth=1.0,
-            colorSpace="rgb",
-            lineColor="black",
-            fillColor="black",
-            opacity=None,
-            depth=0.0,
-            interpolate=True,
-        )
-
-    def draw(self):
-        """Draw stimulation"""
-        if self._fr_counter == 0:
-            self._fr_counter = self._fr_rate
-            self.stim.draw()
-        self._fr_counter -= 1
 
 
 def setupData(expInfo, dataDir=None):
@@ -113,8 +68,6 @@ def setupData(expInfo, dataDir=None):
         dataFileName=dataDir + os.sep + filename,
         sortColumns="time",
     )
-    thisExp.setPriority("thisRow.t", priority.CRITICAL)
-    thisExp.setPriority("expName", priority.LOW)
 
     return thisExp
 
@@ -350,7 +303,6 @@ def run(model, expInfo, thisExp, win, inputs, globalClock=None, thisSession=None
         globalClock = core.Clock()
     if ioServer is not None:
         ioServer.syncClock(globalClock)
-    logging.setDefaultClock(globalClock)
     routineTimer = core.Clock()
     win.flip()
 
@@ -463,7 +415,7 @@ def run(model, expInfo, thisExp, win, inputs, globalClock=None, thisSession=None
     routineTimer.reset()
 
     blocks = data.TrialHandler(
-        nReps=5.0,
+        nReps=N_BLOCKS,
         method="sequential",
         extraInfo=expInfo,
         originPath=-1,
@@ -487,7 +439,7 @@ def run(model, expInfo, thisExp, win, inputs, globalClock=None, thisSession=None
                 globals()[paramName] = thisBlock[paramName]
 
         trials = data.TrialHandler(
-            nReps=5.0,
+            nReps=N_TRIALS,
             method="sequential",
             extraInfo=expInfo,
             originPath=-1,
@@ -546,7 +498,7 @@ def run(model, expInfo, thisExp, win, inputs, globalClock=None, thisSession=None
                 tThisFlipGlobal = win.getFutureFlipTime(clock=None)
                 frameN = frameN + 1
 
-                if stimuli.status == NOT_STARTED and tThisFlip >= 4 - frameTolerance:
+                if stimuli.status == NOT_STARTED and tThisFlip >= TMAX - frameTolerance:
 
                     stimuli.frameNStart = frameN
                     stimuli.tStart = t
@@ -569,7 +521,7 @@ def run(model, expInfo, thisExp, win, inputs, globalClock=None, thisSession=None
                     if is_visible:
                         stimuli.draw()
 
-                    if tThisFlipGlobal > stimuli.tStartRefresh + 4 - frameTolerance:
+                    if tThisFlipGlobal > stimuli.tStartRefresh + TMAX - frameTolerance:
 
                         stimuli.tStop = t
                         stimuli.frameNStop = frameN
@@ -692,6 +644,14 @@ def run(model, expInfo, thisExp, win, inputs, globalClock=None, thisSession=None
         t = 0
         _timeToFirstFrame = win.getFutureFlipTime(clock="now")
         frameN = -1
+
+        db = model.get_db()
+        compute = Synchronization(database=db, event_dict={"target": 1})
+        updated_res = compute.sync_results()
+
+        text.text = (
+            f"Brain synchronization value: {updated_res}\n\nPress space to continue"
+        )
 
         # --- Run Routine "syncFeedback" ---
         routineForceEnded = not continueRoutine
