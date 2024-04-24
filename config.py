@@ -11,6 +11,7 @@ N_BLOCKS = 1
 
 # Hyperscanning parameters
 CHANNELS_LIST = ["O1", "O2"]
+EVENT_DICT = {"target": 1}
 SAMPLING_FREQ = 250
 FREQ_BANDS = {"freq_bands": [1, 40]}
 TMIN = 1
