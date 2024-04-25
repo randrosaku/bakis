@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 import os
 
+import scipy.signal as signal
+
 from typing import Any
 from hypyp import analyses
 
@@ -48,7 +50,6 @@ class Synchronization:
         self.epoch_data()
 
         print("Brain synchronization calculations in progress >>> ")
-        print("Event dictionary: ", self._event_dict)
 
     def init_params(self):
         """Synchronization parameters"""
@@ -183,43 +184,90 @@ class Synchronization:
 
         return self._concatenated_epochs
 
-    def res(self, m):
-        l_00 = []
-        l_01 = []
-        l_10 = []
-        l_11 = []
-
-        m = m[0]
-        for i in range(len(m)):
-            l_00.append(m[i][0][0])
-            l_01.append(m[i][0][1])
-            l_10.append(m[i][1][0])
-            l_11.append(m[i][1][1])
-
-        return l_00, l_01, l_10, l_11
-
-    def calculate_sync(self, parameter, frequencies, epochs):
-        # print(epochs)
-        try:
-            assert len(epochs[0]) == len(epochs[1]), "Mismatched epochs"
-        except AssertionError:
-            return None, None
-
-        connectivity_matrix = analyses.pair_connectivity(
-            data=np.array(epochs),
-            sampling_rate=self._params["SR"],
-            frequencies=frequencies,
-            mode=parameter,
-            epochs_average=False,
+    def _multiply_conjugate(
+        self, real: np.ndarray, imag: np.ndarray, transpose_axes: tuple
+    ) -> np.ndarray:
+        formula = "jilm,jimk->jilk"
+        product = (
+            np.einsum(formula, real, real.transpose(transpose_axes))
+            + np.einsum(formula, imag, imag.transpose(transpose_axes))
+            - 1j
+            * (
+                np.einsum(formula, real, imag.transpose(transpose_axes))
+                - np.einsum(formula, imag, real.transpose(transpose_axes))
+            )
         )
 
-        sync_mat = connectivity_matrix[:, :, 0:2, 2:4]
-        sync_list = self.res(sync_mat)
+        return product
 
-        sync = np.round(np.mean(sync_list[0]), 2)
-        sync_std = np.round(np.std(sync_list[0]), 2)
+    def compute_sync(
+        self, complex_signal: np.ndarray, epochs_average: bool = True
+    ) -> np.ndarray:
 
-        return sync, sync_std
+        n_epoch, n_ch, n_freq, n_samp = (
+            complex_signal.shape[1],
+            complex_signal.shape[2],
+            complex_signal.shape[3],
+            complex_signal.shape[4],
+        )
+
+        # calculate all epochs at once, the only downside is that the disk may not have enough space
+        complex_signal = complex_signal.transpose((1, 3, 0, 2, 4)).reshape(
+            n_epoch, n_freq, 2 * n_ch, n_samp
+        )
+        transpose_axes = (0, 1, 3, 2)
+
+        c = np.real(complex_signal)
+        s = np.imag(complex_signal)
+        amp = np.abs(complex_signal) ** 2
+        dphi = self._multiply_conjugate(c, s, transpose_axes=transpose_axes)
+        con = np.abs(dphi) / np.sqrt(
+            np.einsum("nil,nik->nilk", np.nansum(amp, axis=3), np.nansum(amp, axis=3))
+        )
+
+        con = con.swapaxes(0, 1)  # n_freq x n_epoch x 2*n_ch x 2*n_ch
+        if epochs_average:
+            con = np.nanmean(con, axis=1)
+
+        return con
+
+    def hilbert_tranform(self, data: np.ndarray):
+
+        assert (
+            data[0].shape[0] == data[1].shape[0]
+        ), "Two data streams should have the same number of trials."
+        data = np.array(data)
+
+        # Hilbert transform
+        complex_signal = []
+
+        data_array = np.array([data[participant] for participant in range(2)])
+        hilb = signal.hilbert(data_array)
+        complex_signal.append(hilb)
+
+        complex_signal = np.moveaxis(np.array(complex_signal), [0], [3])
+
+        return complex_signal
+
+    def calculate_sync(self, epochs):
+        try:
+            assert len(epochs[0]) == len(
+                epochs[1]
+            ), "Two data streams should have the same number of trials."
+        except AssertionError:
+            return None
+
+        values = self.hilbert_tranform(data=np.array(epochs))
+        result = self.compute_sync(values, epochs_average=True)
+
+        inter_values = result[:, 0:2, 2:4]
+
+        AM = np.mean(inter_values)
+        GM = np.prod(inter_values) ** (1 / 4)
+
+        inter_sync = np.round(((AM + GM) / 2), 2)
+
+        return inter_sync
 
     def sync_results(self, parameter="coh", frequencies=None, epochs=None, trial=-1):
         epochs = self._concatenated_epochs if epochs is None else epochs
@@ -243,8 +291,6 @@ class Synchronization:
             ]
         )
 
-        print("\nBrain synchronization experiment results\n")
-
         pairs = list(combinations(epochs, 2))
         for pair in pairs:
             sub1, sub2 = pair
@@ -256,14 +302,8 @@ class Synchronization:
                     value["target"] for value in sub2.values()
                 ]
 
-                sync, std = self.calculate_sync(
-                    parameter=parameter,
-                    frequencies=self._params["freq_bands"],
-                    epochs=subjects_data,
-                )
-                print(
-                    f"{self._params['users'][subjects[0]]} vs {self._params['users'][subjects[1]]} calculations: {sync} +- {std}"
-                )
+                sync = self.calculate_sync(epochs=subjects_data)
+                print(f"\nSynchronization value: {sync}\n")
 
                 if RECORD:
                     print(">>> Writing results to file\n")
@@ -280,7 +320,6 @@ class Synchronization:
                         trial,
                         parameter,
                         sync,
-                        std,
                     ]
             except KeyError as e:
                 print(f"Error: {e}")
