@@ -1,4 +1,5 @@
-"""
+"""This experiment was created with the help of PsychoPy3 Experiment Builder (v2023.2.3)
+
     Peirce J, Gray JR, Simpson S, MacAskill M, Höchenberger R, Sogo H, Kastman E, Lindeløv JK. (2019) 
         PsychoPy2: Experiments in behavior made easy Behav Res 51: 195. 
         https://doi.org/10.3758/s13428-018-01193-y
@@ -12,7 +13,7 @@ plugins.activatePlugins()
 prefs.hardware["audioLib"] = "ptb"
 prefs.hardware["audioLatencyMode"] = "3"
 
-from psychopy import visual, core, data
+from psychopy import visual, core, data, session
 from psychopy.tools import environmenttools
 from psychopy.constants import (
     NOT_STARTED,
@@ -27,26 +28,21 @@ from psychopy.hardware import keyboard
 
 from config import expName, FLICKER_FREQ, N_TRIALS, N_BLOCKS, TMAX
 from utils.synchronization import Synchronization
+from model import Model
 
 result = -1
 _thisDir = os.path.dirname(os.path.abspath(__file__))
 
 
-def setupData(expInfo, dataDir=None):
-    """
-    Make an ExperimentHandler to handle trials and saving.
+def setupData(expInfo: dict, dataDir: str = None):
+    """Make an ExperimentHandler to handle trials and saving.
 
-    Parameters
-    ==========
-    expInfo : dict
-        Information about this experiment, created by the `setupExpInfo` function.
-    dataDir : Path, str or None
-        Folder to save the data to, leave as None to create a folder in the current directory.
-    Returns
-    ==========
-    psychopy.data.ExperimentHandler
-        Handler object for this experiment, contains the data to save and information about
-        where to save it to.
+    Args:
+        expInfo (dict): Information about this experiment, created by the `setupExpInfo` function.
+        dataDir (str): Folder to save the data to, leave as None to create a folder in the current directory.
+
+    Returns:
+        psychopy.data.ExperimentHandler: Handler object for this experiment.
     """
 
     if dataDir is None:
@@ -72,21 +68,15 @@ def setupData(expInfo, dataDir=None):
     return thisExp
 
 
-def setupWindow(expInfo=None, win=None):
-    """
-    Setup the Window
+def setupWindow(expInfo: dict = None, win: visual.Window = None):
+    """Setup the Window
 
-    Parameters
-    ==========
-    expInfo : dict
-        Information about this experiment, created by the `setupExpInfo` function.
-    win : psychopy.visual.Window
-        Window to setup - leave as None to create a new window.
+    Args:
+        expInfo (dict): Information about this experiment, created by the `setupExpInfo` function.
+        win (psychopy.visual.Window): Window to setup, leave as None to create a new window.
 
-    Returns
-    ==========
-    psychopy.visual.Window
-        Window in which to run this experiment.
+    Returns:
+        psychopy.visual.Window: Window in which to run this experiment.
     """
     if win is None:
         win = visual.Window(
@@ -117,31 +107,19 @@ def setupWindow(expInfo=None, win=None):
     return win
 
 
-def setupInputs(expInfo, thisExp, win):
-    """
-    Setup keyboard input
+def setupInputs(win: visual.Window):
+    """Setup keyboard input
 
-    Parameters
-    ==========
-    expInfo : dict
-        Information about this experiment, created by the `setupExpInfo` function.
-    thisExp : psychopy.data.ExperimentHandler
-        Handler object for this experiment, contains the data to save and information about
-        where to save it to.
-    win : psychopy.visual.Window
-        Window in which to run this experiment.
-    Returns
-    ==========
-    dict
-        Dictionary of input devices by name.
+    Args:
+        expInfo (dict): Information about this experiment, created by the `setupExpInfo` function.
+        win (psychopy.visual.Window): Window in which to run this experiment.
+
+    Returns:
+        dict: Dictionary of input devices by name.
     """
     ioConfig = {}
 
     ioConfig["Keyboard"] = dict(use_keymap="psychopy")
-
-    ioSession = "1"
-    if "session" in expInfo:
-        ioSession = str(expInfo["session"])
     ioServer = io.launchHubServer(window=win, **ioConfig)
 
     defaultKeyboard = keyboard.Keyboard(backend="iohub")
@@ -149,34 +127,29 @@ def setupInputs(expInfo, thisExp, win):
     return {"ioServer": ioServer, "defaultKeyboard": defaultKeyboard}
 
 
-def draw(fr_rate, fr_counter, stim):
-    """Draw stimulation"""
+def run(
+    model: Model,
+    expInfo: dict,
+    thisExp: data.ExperimentHandler,
+    win: visual.Window,
+    inputs: dict,
+    globalClock: core.Clock = None,
+    thisSession: session.Session = None,
+):
+    """Run the experiment.
 
-    if fr_counter == 0:
-        fr_counter = fr_rate
-        stim.draw()
-    fr_counter -= 1
+    Args:
+        model (Model): SSVEP model used for experiment
+        expInfo (dict): Information about this experiment, created by the `setupExpInfo` function.
+        thisExp (psychopy.data.ExperimentHandler): Handler object for this experiment, contains the
+        data to save and information about where to save it to.
+        win (psychopy.visual.Window): Window in which to run this experiment.
+        inputs (dict): Dictionary of input devices by name.
+        globalClock (psychopy.core.clock.Clock): Clock to get global time from - supply None to make a new one.
+        thisSession (psychopy.session.Session): Handle of the Session object this experiment is being run from, if any.
 
-
-def run(model, expInfo, thisExp, win, inputs, globalClock=None, thisSession=None):
-    """
-    Run the experiment flow.
-
-    Parameters
-    ==========
-    expInfo : dict
-        Information about this experiment, created by the `setupExpInfo` function.
-    thisExp : psychopy.data.ExperimentHandler
-        Handler object for this experiment, contains the data to save and information about
-        where to save it to.
-    psychopy.visual.Window
-        Window in which to run this experiment.
-    inputs : dict
-        Dictionary of input devices by name.
-    globalClock : psychopy.core.clock.Clock or None
-        Clock to get global time from - supply None to make a new one.
-    thisSession : psychopy.session.Session or None
-        Handle of the Session object this experiment is being run from, if any.
+    Returns:
+        None
     """
     thisExp.status = STARTED
     exec = environmenttools.setExecEnvironment(globals())
@@ -646,7 +619,9 @@ def run(model, expInfo, thisExp, win, inputs, globalClock=None, thisSession=None
         frameN = -1
 
         db = model.get_db()
-        compute = Synchronization(database=db, event_dict={"target": 1})
+        compute = Synchronization(
+            database=db, event_dict={"target": 1}, duplicate=False
+        )
         updated_res = compute.sync_results()
 
         text.text = (
@@ -865,33 +840,28 @@ def run(model, expInfo, thisExp, win, inputs, globalClock=None, thisSession=None
     endExperiment(thisExp, win=win)
 
 
-def saveData(thisExp):
-    """
-    Save data from this experiment
+def saveData(thisExp: data.ExperimentHandler):
+    """Save data from this experiment
 
-    Parameters
-    ==========
-    thisExp : psychopy.data.ExperimentHandler
-        Handler object for this experiment, contains the data to save and information about
-        where to save it to.
+    Args:
+        thisExp (psychopy.data.ExperimentHandler): Handler object for this experiment, contains the data to save and information about where to save it to.
+
+    Returns:
+        None
     """
     filename = thisExp.dataFileName
     thisExp.saveAsWideText(filename + ".csv", delim="auto")
 
 
-def endExperiment(thisExp, win=None):
-    """
-    End this experiment, performing final shut down operations.
+def endExperiment(thisExp: data.ExperimentHandler, win: visual.Window = None):
+    """End this experiment, performing final shut down operations.
 
-    Parameters
-    ==========
-    thisExp : psychopy.data.ExperimentHandler
-        Handler object for this experiment, contains the data to save and information about
-        where to save it to.
-    inputs : dict
-        Dictionary of input devices by name.
-    win : psychopy.visual.Window
-        Window for this experiment.
+    Args:
+        thisExp (psychopy.data.ExperimentHandler): Handler object for this experiment, contains the data to save and information about where to save it to.
+        win (psychopy.visual.Window): Window for this experiment.
+
+    Returns:
+        None
     """
     if win is not None:
         win.clearAutoDraw()
@@ -900,18 +870,20 @@ def endExperiment(thisExp, win=None):
     thisExp.status = FINISHED
 
 
-def quit(thisExp, win=None, thisSession=None):
-    """
-    Fully quit, closing the window and ending the Python process.
+def quit(
+    thisExp: data.ExperimentHandler,
+    win: visual.Window = None,
+    thisSession: session.Session = None,
+):
+    """Fully quit, closing the window and ending the Python process.
 
-    Parameters
-    ==========
-    win : psychopy.visual.Window
-        Window to close.
-    inputs : dict
-        Dictionary of input devices by name.
-    thisSession : psychopy.session.Session or None
-        Handle of the Session object this experiment is being run from, if any.
+    Args:
+        thisExp (psychopy.data.ExperimentHandler): Handler object for this experiment, contains the data to save and information about where to save it to.
+        win (psychopy.visual.Window): Window to close.
+        thisSession (psychopy.session.Session): Handle of the Session object this experiment is being run from, if any.
+
+    Returns:
+        None
     """
     thisExp.abort()
 
