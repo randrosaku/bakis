@@ -16,7 +16,7 @@ def launch_experiment():
     try:
         thisExp = setupData(expInfo=expInfo)
         win = setupWindow(expInfo=expInfo)
-        inputs = setupInputs(expInfo=expInfo, thisExp=thisExp, win=win)
+        inputs = setupInputs(win=win)
 
         model.logger.info("Hyperscanning session starting")
 

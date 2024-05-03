@@ -3,11 +3,13 @@ import pandas as pd
 import numpy as np
 import os
 
-from typing import Any
-from hypyp import analyses
+import scipy.signal as signal
 
+from hypyp import analyses
+from typing import Any
 from itertools import combinations
 
+from model import Model
 from config import (
     N_TRIALS,
     N_BLOCKS,
@@ -21,17 +23,25 @@ from config import (
     EXP_NAME,
     USERS,
     TRIAL_LEN,
+    EVENT_DICT,
 )
 
 
 class Synchronization:
-    """Perform brain synchronization calculations"""
+    """Performs brain synchronization calculations"""
 
-    def __init__(self, database, event_dict, duplicate=True):
+    def __init__(self, model: Model, database: tuple, duplicate: bool = True):
+        """Initializes synchronization calculation class
+
+        Args:
+            model (Model): Handles logging through BrainAccess Board API interface
+            database (tuple): The experiment database
+            duplicate (bool): Experiment environment flag when only one device is connected
+        """
         self._sync_value = -1
 
         self._db, self._db_status = database
-        self._event_dict = event_dict
+        self._model = model
         self._duplicate = duplicate
 
         self.get_user_devices()
@@ -47,11 +57,10 @@ class Synchronization:
         self.update_users()
         self.epoch_data()
 
-        print("Brain synchronization calculations in progress >>> ")
-        print("Event dictionary: ", self._event_dict)
+        self._model.logger.info("Brain synchronization calculations in progress >>> ")
 
     def init_params(self):
-        """Synchronization parameters"""
+        """Initializes synchronization parameters"""
 
         self._params: dict[str, Any] = {}
         self._params["channels_list"] = CHANNELS_LIST
@@ -60,19 +69,23 @@ class Synchronization:
         self._params["tmin"] = TMIN
         self._params["tmax"] = TMAX
         self._params["users"] = USERS
+        self._params["event_dict"] = EVENT_DICT
 
     def update_users(self):
+        """Updates user names based on their devices"""
         for device in self._user_devices:
             if device not in USERS:
-                username = f"user_{device}"
-                # username = input(f"Enter the username for {device}: ")
+                # username = f"user_{device}"
+                username = input(f"Enter the username for {device}: ")
                 USERS[device] = username
 
     def get_user_devices(self):
+        """Returns user devices"""
         devices = self._db.separate_marker_devices()
         self._user_devices = list(devices["data"].keys())
 
     def get_mne_from_db(self):
+        """Gets MNE data from experiment database"""
         if not self._db:
             return None
 
@@ -85,18 +98,35 @@ class Synchronization:
                 # if only 1 device connected, duplicate
                 self._mne_data.append({device: self._db.get_mne()[device]})
 
-        if len(self._mne_data) != 0:
-            print("\n")
-            # print({"mne_data": self._mne_data})
-        else:
-            print("No data found")
+        if len(self._mne_data) == 0:
+            self._model.logger.error("No MNE data found")
 
-    def get_current_events(self, events):
+    def get_current_events(self, events: np.ndarray):
+        """Gets the events from the current block of trials
+
+        Args:
+            events (np.ndarray): The identity and timing of experimental events, around which the epochs were created.
+        """
         current_events = events[-N_TRIALS:]
 
         return current_events
 
-    def get_full_epochs(self, device, raw_data, events, ev_id):
+    def get_full_epochs(
+        self,
+        device: str,
+        raw_data: mne.io.array.array.RawArray,
+        events: np.ndarray,
+        ev_id: dict,
+    ):
+        """Creates epochs for the whole experiment
+
+        Args:
+            device (str): User device name
+            raw_data (mne.io.array.array.RawArray): User raw data
+            events (np.ndarray): The identity and timing of experimental events, around which the epochs were created.
+            ev_id (dict): Event dictionary
+        """
+
         self._all_epochs.append(
             {
                 device: mne.Epochs(
@@ -115,7 +145,9 @@ class Synchronization:
         )
 
     def epoch_data(self):
+        """Creates epochs from raw MNE data"""
         if len(self._mne_data) == 0:
+            self._model.logger.error("No MNE data found")
             return None
 
         self._evs = []
@@ -123,7 +155,7 @@ class Synchronization:
         for raw_sub in self._mne_data:
             for device, raw_data in raw_sub.items():
                 events, ev_id = mne.events_from_annotations(
-                    raw_data, event_id=self._event_dict, verbose=False
+                    raw_data, event_id=self._params["event_dict"], verbose=False
                 )
 
                 if events is not None:
@@ -148,32 +180,10 @@ class Synchronization:
                             }
                         )
 
-                    except ValueError:
-                        for key, value in ev_id.items():
-                            try:
-                                self._current_epochs.append(
-                                    {
-                                        device: mne.Epochs(
-                                            raw_data.filter(
-                                                l_freq=1, h_freq=40, verbose=False
-                                            ),
-                                            events=current_events,
-                                            event_id={key: value},
-                                            tmin=self._params["tmin"],
-                                            tmax=self._params["tmax"],
-                                            baseline=None,
-                                            preload=True,
-                                            verbose=False,
-                                            picks=self._params["channels_list"],
-                                        )
-                                    }
-                                )
-                            except Exception as e:
-                                continue
                     finally:
                         self.get_full_epochs(device, raw_data, events, ev_id)
                 else:
-                    print("No events found")
+                    self._model.logger.error("No events found")
 
         for epoch in self._current_epochs:
             self._concatenated_epochs.append(epoch)
@@ -181,47 +191,70 @@ class Synchronization:
         for epoch in self._all_epochs:
             self._all_concatenated_epochs.append(epoch)
 
-        return self._concatenated_epochs
+    def hilbert_tranform(self, data: np.ndarray):
+        """Computes analytic signal using Hilbert transform
 
-    def res(self, m):
-        l_00 = []
-        l_01 = []
-        l_10 = []
-        l_11 = []
+        Args:
+            data (np.ndarray): Data to compute analytic signal from
+        """
 
-        m = m[0]
-        for i in range(len(m)):
-            l_00.append(m[i][0][0])
-            l_01.append(m[i][0][1])
-            l_10.append(m[i][1][0])
-            l_11.append(m[i][1][1])
+        assert (
+            data[0].shape[0] == data[1].shape[0]
+        ), "Two data streams should have the same number of trials."
+        data = np.array(data)
 
-        return l_00, l_01, l_10, l_11
+        # Hilbert transform
+        complex_signal = []
 
-    def calculate_sync(self, parameter, frequencies, epochs):
-        # print(epochs)
+        data_array = np.array([data[participant] for participant in range(2)])
+        hilb = signal.hilbert(data_array)
+        complex_signal.append(hilb)
+
+        complex_signal = np.moveaxis(np.array(complex_signal), [0], [3])
+
+        return complex_signal
+
+    def calculate_sync(self, epochs: mne.Epochs, parameter: str):
+        """Calculates synchronization value
+
+        Args:
+            epochs (mne.Epochs): Epoched EEG data
+            parameter (str): Synchronization parameter
+        """
         try:
-            assert len(epochs[0]) == len(epochs[1]), "Mismatched epochs"
+            assert len(epochs[0]) == len(
+                epochs[1]
+            ), "Two data streams should have the same number of trials."
         except AssertionError:
-            return None, None
+            return None
 
-        connectivity_matrix = analyses.pair_connectivity(
-            data=np.array(epochs),
-            sampling_rate=self._params["SR"],
-            frequencies=frequencies,
-            mode=parameter,
-            epochs_average=False,
-        )
+        values = self.hilbert_tranform(data=np.array(epochs))
+        result = analyses.compute_sync(values, parameter, epochs_average=True)
 
-        sync_mat = connectivity_matrix[:, :, 0:2, 2:4]
-        sync_list = self.res(sync_mat)
+        inter_values = result[:, 0:2, 2:4]
 
-        sync = np.round(np.mean(sync_list[0]), 2)
-        sync_std = np.round(np.std(sync_list[0]), 2)
+        AM = np.mean(inter_values)
+        GM = np.prod(inter_values) ** (1 / 4)
 
-        return sync, sync_std
+        inter_sync = np.round(((AM + GM) / 2), 2)
 
-    def sync_results(self, parameter="coh", frequencies=None, epochs=None, trial=-1):
+        return inter_sync
+
+    def sync_results(
+        self,
+        parameter: str = "coh",
+        frequencies: dict = None,
+        epochs: mne.Epochs = None,
+        trial: int = -1,
+    ):
+        """Returns synchronization calculations and writes results to file
+
+        Args:
+            parameter (str): Synchronization parameter
+            frequencies (dict): Frequency bands over which perform calculations
+            epochs (mne.Epochs): Epoched MNE data
+            trial (int): Trial number
+        """
         epochs = self._concatenated_epochs if epochs is None else epochs
         frequencies = self._params["freq_bands"] if frequencies is None else frequencies
 
@@ -243,8 +276,6 @@ class Synchronization:
             ]
         )
 
-        print("\nBrain synchronization experiment results\n")
-
         pairs = list(combinations(epochs, 2))
         for pair in pairs:
             sub1, sub2 = pair
@@ -256,17 +287,11 @@ class Synchronization:
                     value["target"] for value in sub2.values()
                 ]
 
-                sync, std = self.calculate_sync(
-                    parameter=parameter,
-                    frequencies=self._params["freq_bands"],
-                    epochs=subjects_data,
-                )
-                print(
-                    f"{self._params['users'][subjects[0]]} vs {self._params['users'][subjects[1]]} calculations: {sync} +- {std}"
-                )
+                sync = self.calculate_sync(epochs=subjects_data, parameter=parameter)
+                self._model.logger.info(f"\nSynchronization value: {sync}\n")
 
                 if RECORD:
-                    print(">>> Writing results to file\n")
+                    self._model.logger.info(">>> Writing results to file\n")
                     df.loc[len(df.index)] = [
                         FLICKER_FREQ,
                         TRIAL_LEN,
@@ -280,16 +305,15 @@ class Synchronization:
                         trial,
                         parameter,
                         sync,
-                        std,
                     ]
             except KeyError as e:
-                print(f"Error: {e}")
+                self._model.logger.error(f"Error: {e}")
                 continue
 
         if RECORD:
-            print(">>> Saving file\n")
+            self._model.logger.info(">>> Saving file\n")
             filename = f"output/{EXP_NAME}.csv"
-            # df.to_csv(filename, index=False)
+
             if not os.path.isfile(filename):
                 df.to_csv(filename, index=False)
             else:
