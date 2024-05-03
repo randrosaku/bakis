@@ -6,8 +6,8 @@ import time
 EXP_NAME = f'exp-{time.strftime("%Y%m%d-%H%M%S")}'
 TRIAL_LEN = 4
 FLICKER_FREQ = 12
-N_TRIALS = 1
-N_BLOCKS = 1
+N_TRIALS = 2
+N_BLOCKS = 2
 
 # Hyperscanning parameters
 CHANNELS_LIST = ["O1", "O2"]
@@ -18,7 +18,9 @@ TMIN = 1
 TMAX = 4
 RECORD = False
 USERS = {}
+PROCESSING_MODE = ""
 
+# Psychopy parameters
 expName = "ssvep-stimuli"
 exp = {
     "group": "001",
@@ -30,18 +32,14 @@ exp = {
 }
 
 
-def showExpInfoDlg(expInfo):
-    """
-    Show participant info dialog.
-    Parameters
-    ==========
-    expInfo : dict
-        Information about this experiment, created by the `setupExpInfo` function.
+def showExpInfoDlg(expInfo: dict):
+    """Show participant info dialog.
 
-    Returns
-    ==========
-    dict
-        Information about this experiment.
+    Args:
+        expInfo (dict): Information about this experiment, created by the `setupExpInfo` function.
+
+    Returns:
+        dict: Information about this experiment.
     """
 
     poppedKeys = {

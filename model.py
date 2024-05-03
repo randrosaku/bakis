@@ -18,9 +18,6 @@ class Model:
 
         Args:
             logger (logging.Logger): The logger object for logging information, errors, etc.
-
-        Returns:
-            None
         """
         self.logger = logger
         self.device_names: list[str] = []
@@ -29,15 +26,8 @@ class Model:
         self.filename = get_utils_dict().current_save_file
 
     def init_stimulation(self):
-        """Initializes and starts stimulation along with device connection and recording.
-
-        Args:
-            None
-
-        Returns:
-            None
-        """
-        self.stimulation = API.Stimulation(source_id="sync-video")
+        """Initializes and starts stimulation along with device connection and recording."""
+        self.stimulation = API.Stimulation(source_id="sync-stimulus")
         self.stim_name = self.stimulation.info.source_id()
         self.stim_port = self.stimulation.outlet.get_info().uid()
 
@@ -59,14 +49,7 @@ class Model:
         self.logger.info(command["message"])
 
     def disconnect_stimulation(self):
-        """Disconnects the stimulation device and stops recording.
-
-        Args:
-            None
-
-        Returns:
-            None
-        """
+        """Disconnects the stimulation device and stops recording."""
         command = self.commands["disconnect_device"].copy()
         command["device_name"] = self.stim_name
         command["device_type"] = "lsl"
@@ -83,9 +66,6 @@ class Model:
     def get_db(self):
         """Retrieves the current database configuration.
 
-        Args:
-            None
-
         Returns:
             tuple: Database object and its connection status.
         """
@@ -97,8 +77,5 @@ class Model:
 
         Args:
             msg (str): The annotation message to add.
-
-        Returns:
-            None
         """
         self.stimulation.annotate(msg)
