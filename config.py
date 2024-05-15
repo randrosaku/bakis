@@ -2,26 +2,32 @@ from psychopy import gui, core, data
 
 import time
 
+# Testing mode
+TESTING = True
+
 # Experiment parameters
 EXP_NAME = f'exp-{time.strftime("%Y%m%d-%H%M%S")}'
 TRIAL_LEN = 4
 FLICKER_FREQ = 12
 N_TRIALS = 2
-N_BLOCKS = 2
+N_BLOCKS = 1
 
 # Hyperscanning parameters
 CHANNELS_LIST = ["O1", "O2"]
 EVENT_DICT = {"target": 1}
 SAMPLING_FREQ = 250
 FREQ_BANDS = {"freq_bands": [1, 40]}
-TMIN = 1
+TMIN = 2
 TMAX = 4
 RECORD = False
-USERS = {}
 PROCESSING_MODE = ""
 
 # Psychopy parameters
 expName = "ssvep-stimuli"
+
+#############################################
+# Initial values that should not be changed #
+#############################################
 exp = {
     "group": "001",
     "subj_1": "001",
@@ -30,6 +36,8 @@ exp = {
     "date": data.getDateStr(format="%Y%m%d-%H%M%S"),
     "expName": expName,
 }
+USERS = {}
+#############################################
 
 
 def showExpInfoDlg(expInfo: dict):

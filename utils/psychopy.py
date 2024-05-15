@@ -618,9 +618,7 @@ def run(
         frameN = -1
 
         db = model.get_db()
-        compute = Synchronization(
-            database=db, model=model, duplicate=False
-        )
+        compute = Synchronization(database=db, model=model)
         updated_res = compute.sync_results()
 
         text.text = (
@@ -702,7 +700,7 @@ def run(
             if hasattr(thisComponent, "setAutoDraw"):
                 thisComponent.setAutoDraw(False)
         thisExp.addData("syncFeedback.stopped", globalClock.getTime())
-        
+
         if key_resp_2.keys in ["", [], None]:
             key_resp_2.keys = None
         blocks.addData("key_resp_2.keys", key_resp_2.keys)
@@ -717,12 +715,12 @@ def run(
 
     # --- Prepare to start Routine "thanks" ---
     continueRoutine = True
-    
+
     thisExp.addData("thanks.started", globalClock.getTime())
     key_resp_3.keys = []
     key_resp_3.rt = []
     _key_resp_3_allKeys = []
-    
+
     thanksComponents = [text_2, key_resp_3]
     for thisComponent in thanksComponents:
         thisComponent.tStart = None
@@ -739,42 +737,40 @@ def run(
     # --- Run Routine "thanks" ---
     routineForceEnded = not continueRoutine
     while continueRoutine:
-        
+
         t = routineTimer.getTime()
         tThisFlip = win.getFutureFlipTime(clock=routineTimer)
         tThisFlipGlobal = win.getFutureFlipTime(clock=None)
         frameN = frameN + 1
 
         if text_2.status == NOT_STARTED and tThisFlip >= 0.0 - frameTolerance:
-            
+
             text_2.frameNStart = frameN
             text_2.tStart = t
             text_2.tStartRefresh = tThisFlipGlobal
             win.timeOnFlip(text_2, "tStartRefresh")
-            
+
             thisExp.timestampOnFlip(win, "text_2.started")
-            
+
             text_2.status = STARTED
             text_2.setAutoDraw(True)
 
         waitOnFlip = False
 
         if key_resp_3.status == NOT_STARTED and tThisFlip >= 0.0 - frameTolerance:
-            
+
             key_resp_3.frameNStart = frameN
             key_resp_3.tStart = t
             key_resp_3.tStartRefresh = tThisFlipGlobal
             win.timeOnFlip(key_resp_3, "tStartRefresh")
-            
+
             thisExp.timestampOnFlip(win, "key_resp_3.started")
-            
+
             key_resp_3.status = STARTED
-            
+
             waitOnFlip = True
             win.callOnFlip(key_resp_3.clock.reset)
-            win.callOnFlip(
-                key_resp_3.clearEvents, eventType="keyboard"
-            )
+            win.callOnFlip(key_resp_3.clearEvents, eventType="keyboard")
         if key_resp_3.status == STARTED and not waitOnFlip:
             theseKeys = key_resp_3.getKeys(
                 keyList=["q"], ignoreKeys=["escape"], waitRelease=False
@@ -784,7 +780,7 @@ def run(
                 key_resp_3.keys = _key_resp_3_allKeys[-1].name
                 key_resp_3.rt = _key_resp_3_allKeys[-1].rt
                 key_resp_3.duration = _key_resp_3_allKeys[-1].duration
-                
+
                 continueRoutine = False
 
         if defaultKeyboard.getKeys(keyList=["escape"]):
@@ -796,17 +792,13 @@ def run(
         if not continueRoutine:
             routineForceEnded = True
             break
-        continueRoutine = (
-            False
-        )
+        continueRoutine = False
         for thisComponent in thanksComponents:
             if hasattr(thisComponent, "status") and thisComponent.status != FINISHED:
                 continueRoutine = True
                 break
 
-        if (
-            continueRoutine
-        ):
+        if continueRoutine:
             win.flip()
 
     # --- Ending Routine "thanks" ---

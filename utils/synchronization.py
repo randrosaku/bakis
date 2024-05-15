@@ -24,29 +24,28 @@ from config import (
     USERS,
     TRIAL_LEN,
     EVENT_DICT,
+    TESTING,
 )
 
 
 class Synchronization:
     """Performs brain synchronization calculations"""
 
-    def __init__(self, model: Model, database: tuple, duplicate: bool = True):
+    def __init__(self, model: Model, database: tuple):
         """Initializes synchronization calculation class
 
         Args:
             model (Model): Handles logging through BrainAccess Board API interface
             database (tuple): The experiment database
-            duplicate (bool): Experiment environment flag when only one device is connected
         """
         self._sync_value = -1
 
         self._db, self._db_status = database
         self._model = model
-        self._duplicate = duplicate
 
+        self.init_params()
         self.get_user_devices()
         self.get_mne_from_db()
-        self.init_params()
 
         self._current_epochs = []
         self._all_epochs = []
@@ -70,13 +69,14 @@ class Synchronization:
         self._params["tmax"] = TMAX
         self._params["users"] = USERS
         self._params["event_dict"] = EVENT_DICT
+        self._params["testing"] = TESTING
 
     def update_users(self):
         """Updates user names based on their devices"""
         for device in self._user_devices:
             if device not in USERS:
-                # username = f"user_{device}"
-                username = input(f"Enter the username for {device}: ")
+                username = f"user_{device}"
+                # username = input(f"Enter the username for {device}: ")
                 USERS[device] = username
 
     def get_user_devices(self):
@@ -94,7 +94,7 @@ class Synchronization:
         for device in self._user_devices:
             self._mne_data.append({device: self._db.get_mne()[device]})
 
-            if self._duplicate == True:
+            if self._params["testing"]:
                 # if only 1 device connected, duplicate
                 self._mne_data.append({device: self._db.get_mne()[device]})
 
@@ -162,12 +162,11 @@ class Synchronization:
                     current_events = self.get_current_events(events)
 
                     try:
+                        # processed_data = self._clean(raw_data)
                         self._current_epochs.append(
                             {
                                 device: mne.Epochs(
-                                    raw_data.filter(
-                                        l_freq=1, h_freq=None, verbose=False
-                                    ),
+                                    raw_data,
                                     events=current_events,
                                     event_id=ev_id,
                                     tmin=self._params["tmin"],
@@ -260,19 +259,18 @@ class Synchronization:
 
         df = pd.DataFrame(
             columns=[
-                "Stimulus frequency",
-                "Trial length",
-                "Num of trials per block",
-                "Num of blocks",
-                "Users",
-                "Channels",
-                "Sampling frequency",
-                "Frequency bands",
-                "Subjects",
-                "Trial no",
-                "Parameter",
-                "Synchronization",
-                "Standard deviation",
+                "stimulus_frequency",
+                "trial_length",
+                "n_trials_per_block",
+                "n_blocks",
+                "users",
+                "channels",
+                "sampling_frequency",
+                "frequency_bands",
+                "subjects",
+                "trial_no",
+                "parameter",
+                "synchronization_value",
             ]
         )
 

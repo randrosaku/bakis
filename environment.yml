@@ -1,0 +1,39 @@
+name: hypyp
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - bokeh
+  - pandas
+  - panel=1.3.0
+  - pydantic
+  - pyyaml
+  - matplotlib
+  - mne
+  - pip
+  - liblsl
+  - pip:
+    - appdirs
+    - blinker
+    - dearpygui
+    - multimethod
+    - mypy
+    - mypy-extensions
+    - platformdirs
+    - pybluez2
+    - pynvim
+    - scipy
+    - tomli
+    - pylsl
+    - pyserial
+    - psutil
+    - eeglabio
+    - pybv
+    - edflib
+    - psychopy
+    - scikit-learn
+    - pyedflib
+    - click
+    - hypyp
+    - asrpy
+    - tensorflow=2.10.1
