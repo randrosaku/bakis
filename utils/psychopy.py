@@ -459,6 +459,8 @@ def run(
             flicker_frame_count = 0
             is_visible = False
 
+            model.logger.info("Starting stimuli drawing process")
+
             # --- Run Routine "trial" ---
             routineForceEnded = not continueRoutine
             while continueRoutine and routineTimer.getTime() < 10.0:
@@ -478,17 +480,12 @@ def run(
                     thisExp.timestampOnFlip(win, "stimuli.started")
                     stimuli.status = STARTED
                     flicker_frame_count = 0
-                    model.logger.info(f"Stimulus started at {t}, frame {frameN}")
                     model.annotate("target")
 
                 if stimuli.status == STARTED:
                     new_visibility = flicker_frame_count < visible_frames
                     if new_visibility != is_visible:
                         is_visible = new_visibility
-                        state = "visible" if is_visible else "not visible"
-                        model.logger.info(
-                            f"Stimulus became {state} at frame {frameN}, time {t}"
-                        )
 
                     if is_visible:
                         stimuli.draw()
@@ -499,7 +496,6 @@ def run(
                         stimuli.frameNStop = frameN
                         thisExp.timestampOnFlip(win, "stimuli.stopped")
                         stimuli.status = FINISHED
-                        model.logger.info(f"Stimulus stopped at {t}, frame {frameN}")
 
                     flicker_frame_count = (flicker_frame_count + 1) % frames_per_cycle
 
@@ -595,6 +591,8 @@ def run(
             if thisSession is not None:
 
                 thisSession.sendExperimentData()
+
+        model.logger.info("Ending stimuli drawing process")
 
         # --- Prepare to start Routine "syncFeedback" ---
         continueRoutine = True

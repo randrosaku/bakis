@@ -56,7 +56,7 @@ class Synchronization:
         self.update_users()
         self.epoch_data()
 
-        self._model.logger.info("Brain synchronization calculations in progress >>> ")
+        self._model.logger.info("Starting data processing process")
 
     def init_params(self):
         """Initializes synchronization parameters"""
@@ -190,6 +190,8 @@ class Synchronization:
         for epoch in self._all_epochs:
             self._all_concatenated_epochs.append(epoch)
 
+        self._model.logger.info("Ending data processing process")
+
     def hilbert_tranform(self, data: np.ndarray):
         """Computes analytic signal using Hilbert transform
 
@@ -220,6 +222,8 @@ class Synchronization:
             epochs (mne.Epochs): Epoched EEG data
             parameter (str): Synchronization parameter
         """
+        self._model.logger.info("Starting synchronization calculation process")
+
         try:
             assert len(epochs[0]) == len(
                 epochs[1]
@@ -236,6 +240,8 @@ class Synchronization:
         GM = np.prod(inter_values) ** (1 / 4)
 
         inter_sync = np.round(((AM + GM) / 2), 2)
+
+        self._model.logger.info("Ending synchronization calculation process")
 
         return inter_sync
 
@@ -286,10 +292,10 @@ class Synchronization:
                 ]
 
                 sync = self.calculate_sync(epochs=subjects_data, parameter=parameter)
-                self._model.logger.info(f"\nSynchronization value: {sync}\n")
+                self._model.logger.info(f"Calculated synchronization value: {sync}")
 
                 if RECORD:
-                    self._model.logger.info(">>> Writing results to file\n")
+                    self._model.logger.info("Writing results to file")
                     df.loc[len(df.index)] = [
                         FLICKER_FREQ,
                         TRIAL_LEN,
@@ -309,8 +315,8 @@ class Synchronization:
                 continue
 
         if RECORD:
-            self._model.logger.info(">>> Saving file\n")
-            filename = f"output/{EXP_NAME}.csv"
+            self._model.logger.info("Exporting results' file")
+            filename = f"../output/{EXP_NAME}.csv"
 
             if not os.path.isfile(filename):
                 df.to_csv(filename, index=False)

@@ -2,6 +2,52 @@ from psychopy import gui, core, data
 
 import time
 
+def metadata_gui(expInfo: dict):
+    """Show participant info dialog.
+
+    Args:
+        expInfo (dict): Information about this experiment, created by the `setupExpInfo` function.
+
+    Returns:
+        dict: Information about this experiment.
+    """
+    dlg = gui.DlgFromDict(dictionary=expInfo, sortKeys=False, title=expName)
+    if dlg.OK == False:
+        core.quit()
+
+    return expInfo
+
+def validateInput(expInfo: dict):
+    """Ensure subject IDs are integers.
+
+    Args:
+        expInfo (dict): Information about this experiment, created by the `setupExpInfo` function.
+
+    Returns:
+        dict: Information about this experiment, with validated subject IDs.
+    """
+    poppedKeys = {
+            "date": expInfo.pop("date", data.getDateStr()),
+            "expName": expInfo.pop("expName", expName),
+        }
+
+    metadata_gui(expInfo)
+
+    while True:
+        try:
+            expInfo['subj_1'] = int(expInfo['subj_1'])
+            expInfo['subj_2'] = int(expInfo['subj_2'])
+            expInfo.update(poppedKeys)
+            return expInfo
+
+        except ValueError:
+            errorDlg = gui.DlgFromDict(dictionary={}, title="Error: Subject IDs must be integers")
+
+            if errorDlg.OK:
+                metadata_gui(expInfo)
+            else:
+                core.quit()
+
 # Testing mode
 TESTING = True
 
@@ -19,7 +65,7 @@ SAMPLING_FREQ = 250
 FREQ_BANDS = {"freq_bands": [1, 40]}
 TMIN = 2
 TMAX = 4
-RECORD = False
+RECORD = True
 PROCESSING_MODE = ""
 
 # Psychopy parameters
@@ -37,33 +83,8 @@ exp = {
     "expName": expName,
 }
 USERS = {}
-#############################################
 
-
-def showExpInfoDlg(expInfo: dict):
-    """Show participant info dialog.
-
-    Args:
-        expInfo (dict): Information about this experiment, created by the `setupExpInfo` function.
-
-    Returns:
-        dict: Information about this experiment.
-    """
-
-    poppedKeys = {
-        "date": expInfo.pop("date", data.getDateStr()),
-        "expName": expInfo.pop("expName", expName),
-    }
-
-    dlg = gui.DlgFromDict(dictionary=expInfo, sortKeys=False, title=expName)
-    if dlg.OK == False:
-        core.quit()
-
-    expInfo.update(poppedKeys)
-    return expInfo
-
-
-expInfo = showExpInfoDlg(expInfo=exp)
+expInfo = validateInput(expInfo=exp)
 
 COMMAND = {
     "task": expName,
@@ -71,3 +92,4 @@ COMMAND = {
     "session": expInfo["session"],
     "subject": expInfo["group"],
 }
+#############################################

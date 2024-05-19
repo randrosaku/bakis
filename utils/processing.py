@@ -42,26 +42,10 @@ class Processing:
             random_state=97,
         ).fit(self.reconstructed)
 
-        # ica.plot_overlay(raw, exclude=[0], picks="eeg")
-        # ica.plot_properties(raw, picks=[0, 1])
-
-        # raw.plot()
-        # reconstructed.plot()
-
-        # # barplot of ICA component "EOG match" scores
-        # ica.plot_scores(eog_scores)
-
-        # # plot diagnostics
-        # ica.plot_properties(raw, picks=eog_indices)
-
-        # # plot ICs applied to raw data, with EOG matches highlighted
-        # ica.plot_sources(raw, show_scrollbars=False)
-
         eog_indices, eog_scores = ica.find_bads_eog(
             self.reconstructed, ch_name=["Fp1", "Fp2"]
         )
         ica.exclude = eog_indices
-
         ica.apply(self.reconstructed)
 
         return
@@ -81,7 +65,6 @@ class Processing:
         """Uses Bidirectional LSTM (BiLSTM) recurrent neural network for artifact removal"""
 
         processed_raw = self.raw.copy()
-
         data = processed_raw.get_data()
 
         # Process input data

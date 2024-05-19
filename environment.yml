@@ -36,4 +36,4 @@ dependencies:
     - click
     - hypyp
     - asrpy
-    - tensorflow=2.10.1
+    - tensorflow==2.10.1
