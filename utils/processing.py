@@ -22,12 +22,14 @@ class Processing:
         self.raw.filter(1, 40, fir_design="firwin")
         self.raw.resample(256)
 
+        model = load_model("./RNN_model/models/b40-LRsch.keras")
+
         if mode.lower() == "ica":
             self.ICA()
         elif mode.lower() == "asr":
             self.ASR()
         elif mode.lower() == "bilstm":
-            self.BiLSTM()
+            self.BiLSTM(model=model)
         else:
             raise Exception("Invalid mode provided")
 
@@ -43,7 +45,10 @@ class Processing:
         ).fit(self.reconstructed)
 
         eog_indices, eog_scores = ica.find_bads_eog(
-            self.reconstructed, ch_name=["Fp1", "Fp2"]
+            self.reconstructed,
+            ch_name=["Fp1", "Fp2"],
+            threshold=0.7,
+            measure="correlation",
         )
         ica.exclude = eog_indices
         ica.apply(self.reconstructed)
@@ -61,7 +66,7 @@ class Processing:
 
         return
 
-    def BiLSTM(self):
+    def BiLSTM(self, model):
         """Uses Bidirectional LSTM (BiLSTM) recurrent neural network for artifact removal"""
 
         processed_raw = self.raw.copy()
@@ -87,8 +92,6 @@ class Processing:
                         channel_data[start:end].reshape(samples_per_segment, 1)
                     )
         segments = np.array(segments)
-
-        model = load_model("./RNN_model/models/b40-LRsch.keras")
 
         # Denoise data
         denoised_data = []
