@@ -2,8 +2,6 @@
 
 BAHyP streamlines the setup of research environments, the collection and processing of data, and the computation of interpersonal brain synchronization. This pipeline allows neuroscientists to customize their hyperscanning experiments by adjusting parameters like the method for artifact removal, result exporting, and the duration of visual stimuli tailored to their specific studies. The system is designed to facilitate the study of interpersonal brain synchronization by enabling real-time processing, synchronization computations, and feedback displays.
 
-Developed by Rasa Kundrotaite, IFD-0
-
 # Installation guide
 ## Create a development (conda) environment
 ```
@@ -20,8 +18,4 @@ Installation steps can be found on [BrainAccess website](https://www.brainaccess
 python run.py
 ```
 
-## Additional information
-If you install any new libraries, add them to requirements.txt
-```
-pip list --format=freeze > requirements.txt
-```
+&copy; Rasa Kundrotaite, IFD-0
