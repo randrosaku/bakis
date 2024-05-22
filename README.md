@@ -13,7 +13,7 @@ Installation steps can be found on [BrainAccess website](https://www.brainaccess
 ## Run the application
 1. Run BrainAccess Board
 2. Connect EEG devices to the Board
-3. Start the BAHyP. From root folder ```bakis``` run
+3. Start the BAHyP. From root folder run
 ```
 python run.py
 ```
