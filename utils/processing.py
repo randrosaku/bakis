@@ -5,9 +5,6 @@ from tensorflow.keras.models import load_model
 import numpy as np
 
 
-from config import TMIN, TMAX, CHANNELS_LIST, EVENT_DICT
-
-
 class Processing:
     """ """
 
@@ -22,7 +19,7 @@ class Processing:
         self.raw.filter(1, 40, fir_design="firwin")
         self.raw.resample(256)
 
-        model = load_model("./RNN_model/models/b40-LRsch.keras")
+        model = load_model("./RNN_model/models/b20-LRsch.keras")
 
         if mode.lower() == "ica":
             self.ICA()
@@ -53,7 +50,7 @@ class Processing:
         ica.exclude = eog_indices
         ica.apply(self.reconstructed)
 
-        return
+        return self.reconstructed
 
     def ASR(self):
         """Uses artifact subspace reconstruction (ASR) for artifact removal"""
@@ -64,7 +61,7 @@ class Processing:
         asr.fit(processed_raw)
         self.reconstructed = asr.transform(processed_raw)
 
-        return
+        return self.reconstructed
 
     def BiLSTM(self, model):
         """Uses Bidirectional LSTM (BiLSTM) recurrent neural network for artifact removal"""
@@ -124,4 +121,4 @@ class Processing:
         # Reconstruct signal
         self.reconstructed = mne.io.RawArray(denoised_full, info)
 
-        return
+        return self.reconstructed
