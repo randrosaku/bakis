@@ -1,8 +1,8 @@
 from psychopy import gui, core, data
-
 import time
 
-def metadata_gui(expInfo: dict):
+
+def metadata_gui(expInfo: dict) -> dict:
     """Show participant info dialog.
 
     Args:
@@ -17,7 +17,8 @@ def metadata_gui(expInfo: dict):
 
     return expInfo
 
-def validateInput(expInfo: dict):
+
+def validateInput(expInfo: dict) -> dict:
     """Ensure subject IDs are integers.
 
     Args:
@@ -27,29 +28,32 @@ def validateInput(expInfo: dict):
         dict: Information about this experiment, with validated subject IDs.
     """
     poppedKeys = {
-            "date": expInfo.pop("date", data.getDateStr()),
-            "expName": expInfo.pop("expName", expName),
-        }
+        "date": expInfo.pop("date", data.getDateStr()),
+        "expName": expInfo.pop("expName", expName),
+    }
 
     metadata_gui(expInfo)
 
     while True:
         try:
-            expInfo['subj_1'] = int(expInfo['subj_1'])
-            expInfo['subj_2'] = int(expInfo['subj_2'])
+            expInfo["subj_1"] = int(expInfo["subj_1"])
+            expInfo["subj_2"] = int(expInfo["subj_2"])
             expInfo.update(poppedKeys)
             return expInfo
 
         except ValueError:
-            errorDlg = gui.DlgFromDict(dictionary={}, title="Error: Subject IDs must be integers")
+            errorDlg = gui.DlgFromDict(
+                dictionary={}, title="Error: Subject IDs must be integers"
+            )
 
             if errorDlg.OK:
                 metadata_gui(expInfo)
             else:
                 core.quit()
 
-# Testing mode
-TESTING = True
+
+# Development mode
+DEV = True
 
 # Experiment parameters
 EXP_NAME = f'exp-{time.strftime("%Y%m%d-%H%M%S")}'
@@ -65,8 +69,8 @@ SAMPLING_FREQ = 250
 FREQ_BANDS = {"freq_bands": [1, 40]}
 TMIN = 2
 TMAX = 4
-RECORD = True
-PROCESSING_MODE = ""
+RECORD = False
+PROCESSING_MODE = "ICA"
 
 # Psychopy parameters
 expName = "ssvep-stimuli"

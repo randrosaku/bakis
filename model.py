@@ -9,11 +9,11 @@ from baboard.utils.options import get_utils_dict
 
 class Model:
     """
-    Model class handles the interaction with stimulation devices and recording management
-    using the BoardControl interface.
+    Model class handles the interaction with BrainAccess Board and recording management
+    using the BrainAccess Board API.
     """
 
-    def __init__(self, logger: logging.Logger):
+    def __init__(self, logger: logging.Logger) -> None:
         """Initializes the Model class with a logger and setups up the initial device configurations.
 
         Args:
@@ -25,7 +25,7 @@ class Model:
         self.get_db()
         self.filename = get_utils_dict().current_save_file
 
-    def init_stimulation(self):
+    def init_stimulation(self) -> None:
         """Initializes and starts stimulation along with device connection and recording."""
         self.stimulation = API.Stimulation(source_id="sync-stimulus")
         self.stim_name = self.stimulation.info.source_id()
@@ -48,7 +48,7 @@ class Model:
         self.board_control.command(command)
         self.logger.info(command["message"])
 
-    def disconnect_stimulation(self):
+    def disconnect_stimulation(self) -> None:
         """Disconnects the stimulation device and stops recording."""
         command = self.commands["disconnect_device"].copy()
         command["device_name"] = self.stim_name
@@ -63,7 +63,7 @@ class Model:
         self.board_control.command(command)
         self.logger.info(command["message"])
 
-    def get_db(self):
+    def get_db(self) -> [API.ReadDB, bool]:
         """Retrieves the current database configuration.
 
         Returns:
@@ -72,7 +72,7 @@ class Model:
         self.db, self.db_status = API.get_database()
         return self.db, self.db_status
 
-    def annotate(self, msg: str):
+    def annotate(self, msg: str) -> None:
         """Annotates the current stimulation with a message.
 
         Args:

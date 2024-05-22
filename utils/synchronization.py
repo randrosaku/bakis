@@ -9,6 +9,7 @@ from hypyp import analyses
 from typing import Any
 from itertools import combinations
 
+from utils.processing import Processing
 from model import Model
 from config import (
     N_TRIALS,
@@ -24,14 +25,15 @@ from config import (
     USERS,
     TRIAL_LEN,
     EVENT_DICT,
-    TESTING,
+    DEV,
+    PROCESSING_MODE,
 )
 
 
 class Synchronization:
     """Performs brain synchronization calculations"""
 
-    def __init__(self, model: Model, database: tuple):
+    def __init__(self, model: Model, database: tuple, cleaner: Processing) -> None:
         """Initializes synchronization calculation class
 
         Args:
@@ -53,12 +55,13 @@ class Synchronization:
         self._all_concatenated_epochs = []
         self._concatenated_epochs = []
 
+        self._cleaner = cleaner
         self.update_users()
         self.epoch_data()
 
         self._model.logger.info("Starting data processing process")
 
-    def init_params(self):
+    def init_params(self) -> None:
         """Initializes synchronization parameters"""
 
         self._params: dict[str, Any] = {}
@@ -69,22 +72,22 @@ class Synchronization:
         self._params["tmax"] = TMAX
         self._params["users"] = USERS
         self._params["event_dict"] = EVENT_DICT
-        self._params["testing"] = TESTING
+        self._params["dev"] = DEV
+        self._params["cleaning_mode"] = PROCESSING_MODE
 
-    def update_users(self):
+    def update_users(self) -> None:
         """Updates user names based on their devices"""
         for device in self._user_devices:
             if device not in USERS:
                 username = f"user_{device}"
-                # username = input(f"Enter the username for {device}: ")
                 USERS[device] = username
 
-    def get_user_devices(self):
+    def get_user_devices(self) -> None:
         """Returns user devices"""
         devices = self._db.separate_marker_devices()
         self._user_devices = list(devices["data"].keys())
 
-    def get_mne_from_db(self):
+    def get_mne_from_db(self) -> None:
         """Gets MNE data from experiment database"""
         if not self._db:
             return None
@@ -94,14 +97,14 @@ class Synchronization:
         for device in self._user_devices:
             self._mne_data.append({device: self._db.get_mne()[device]})
 
-            if self._params["testing"]:
+            if self._params["dev"]:
                 # if only 1 device connected, duplicate
                 self._mne_data.append({device: self._db.get_mne()[device]})
 
         if len(self._mne_data) == 0:
             self._model.logger.error("No MNE data found")
 
-    def get_current_events(self, events: np.ndarray):
+    def get_current_events(self, events: np.ndarray) -> np.ndarray:
         """Gets the events from the current block of trials
 
         Args:
@@ -117,7 +120,7 @@ class Synchronization:
         raw_data: mne.io.array.array.RawArray,
         events: np.ndarray,
         ev_id: dict,
-    ):
+    ) -> None:
         """Creates epochs for the whole experiment
 
         Args:
@@ -144,7 +147,7 @@ class Synchronization:
             }
         )
 
-    def epoch_data(self):
+    def epoch_data(self) -> None:
         """Creates epochs from raw MNE data"""
         if len(self._mne_data) == 0:
             self._model.logger.error("No MNE data found")
@@ -162,11 +165,13 @@ class Synchronization:
                     current_events = self.get_current_events(events)
 
                     try:
-                        # processed_data = self._clean(raw_data)
+                        processed_data = self._cleaner.clean(
+                            raw=raw_data, mode=self._params["cleaning_mode"]
+                        )
                         self._current_epochs.append(
                             {
                                 device: mne.Epochs(
-                                    raw_data,
+                                    processed_data,
                                     events=current_events,
                                     event_id=ev_id,
                                     tmin=self._params["tmin"],
@@ -192,11 +197,14 @@ class Synchronization:
 
         self._model.logger.info("Ending data processing process")
 
-    def hilbert_tranform(self, data: np.ndarray):
+    def hilbert_tranform(self, data: np.ndarray) -> np.ndarray:
         """Computes analytic signal using Hilbert transform
 
         Args:
             data (np.ndarray): Data to compute analytic signal from
+
+        Returns:
+            complex_signal (np.ndarray): analytic signal for inter-personal brain sync calculations
         """
 
         assert (
@@ -215,12 +223,15 @@ class Synchronization:
 
         return complex_signal
 
-    def calculate_sync(self, epochs: mne.Epochs, parameter: str):
+    def calculate_sync(self, epochs: mne.Epochs, parameter: str) -> float:
         """Calculates synchronization value
 
         Args:
             epochs (mne.Epochs): Epoched EEG data
             parameter (str): Synchronization parameter
+
+        Returns:
+            inter_sync (float): inter-personal brain sync value
         """
         self._model.logger.info("Starting synchronization calculation process")
 
@@ -250,8 +261,7 @@ class Synchronization:
         parameter: str = "coh",
         frequencies: dict = None,
         epochs: mne.Epochs = None,
-        trial: int = -1,
-    ):
+    ) -> float:
         """Returns synchronization calculations and writes results to file
 
         Args:
@@ -259,6 +269,9 @@ class Synchronization:
             frequencies (dict): Frequency bands over which perform calculations
             epochs (mne.Epochs): Epoched MNE data
             trial (int): Trial number
+
+        Returns:
+            sync (float): brain synchronization value
         """
         epochs = self._concatenated_epochs if epochs is None else epochs
         frequencies = self._params["freq_bands"] if frequencies is None else frequencies
@@ -274,7 +287,6 @@ class Synchronization:
                 "sampling_frequency",
                 "frequency_bands",
                 "subjects",
-                "trial_no",
                 "parameter",
                 "synchronization_value",
             ]
@@ -306,7 +318,6 @@ class Synchronization:
                         SAMPLING_FREQ,
                         self._params["freq_bands"],
                         f"{self._params['users'][subjects[0]]} vs {self._params['users'][subjects[1]]}",
-                        trial,
                         parameter,
                         sync,
                     ]

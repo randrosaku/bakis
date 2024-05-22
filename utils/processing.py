@@ -1,36 +1,50 @@
 import mne
 from mne.preprocessing import ICA
 import asrpy
-from tensorflow.keras.models import load_model
+
+import tensorflow as tf
 import numpy as np
 
 
 class Processing:
-    """ """
+    """Data processing model that cleans noisy EEG signal"""
 
-    def __init__(self, raw, mode):
-        """ """
+    def __init__(self):
+        """Initializes Processing class object"""
+        return
+
+    def clean(self, raw: mne.io.Raw, mode: str = None) -> mne.io.Raw:
+        """Starts cleaning method based on mode configuration. If None, raw noisy data is returned
+
+        Args:
+            raw (mne.io.Raw): raw noisy EEG data
+            mode (str): cleaning mode
+
+        Returns:
+            self.reconstructed (mne.io.Raw): reconstructed, clean EEG signal
+        """
+
         try:
             self.raw = raw.pick(["O1", "O2", "Fp1", "Fp2"])
         except ValueError:
             raise Exception("Channels 'O1', 'O2', 'Fp1', and 'Fp2' are expected.")
-        # self.events = events
 
         self.raw.filter(1, 40, fir_design="firwin")
         self.raw.resample(256)
-
-        model = load_model("./RNN_model/models/b20-LRsch.keras")
 
         if mode.lower() == "ica":
             self.ICA()
         elif mode.lower() == "asr":
             self.ASR()
         elif mode.lower() == "bilstm":
+            model = tf.keras.models.load_model("../RNN_model/models/b20-LRsch.keras")
             self.BiLSTM(model=model)
         else:
-            raise Exception("Invalid mode provided")
+            return self.raw
 
-    def ICA(self):
+        return self.reconstructed
+
+    def ICA(self) -> None:
         """Uses independent component analysis (ICA) for artifact removal"""
         self.reconstructed = self.raw.copy()
 
@@ -41,7 +55,7 @@ class Processing:
             random_state=97,
         ).fit(self.reconstructed)
 
-        eog_indices, eog_scores = ica.find_bads_eog(
+        eog_indices, _ = ica.find_bads_eog(
             self.reconstructed,
             ch_name=["Fp1", "Fp2"],
             threshold=0.7,
@@ -50,9 +64,9 @@ class Processing:
         ica.exclude = eog_indices
         ica.apply(self.reconstructed)
 
-        return self.reconstructed
+        return
 
-    def ASR(self):
+    def ASR(self) -> None:
         """Uses artifact subspace reconstruction (ASR) for artifact removal"""
 
         processed_raw = self.raw.copy()
@@ -61,10 +75,14 @@ class Processing:
         asr.fit(processed_raw)
         self.reconstructed = asr.transform(processed_raw)
 
-        return self.reconstructed
+        return
 
-    def BiLSTM(self, model):
-        """Uses Bidirectional LSTM (BiLSTM) recurrent neural network for artifact removal"""
+    def BiLSTM(self, model: tf.keras.Model) -> None:
+        """Uses Bidirectional LSTM (BiLSTM) recurrent neural network for artifact removal
+
+        Args:
+            model (tf.keras.Model): trained recurrent neural network model
+        """
 
         processed_raw = self.raw.copy()
         data = processed_raw.get_data()
@@ -95,7 +113,7 @@ class Processing:
         for segment in segments:
             prediction = model.predict(
                 segment[np.newaxis, :, :]
-            )  # Model predicts on one segment at a time
+            )  # Model predicts on one segment at a time (2s EEG input)
             denoised_data.append(prediction.squeeze())
         denoised_data = np.array(denoised_data)
 
@@ -118,7 +136,7 @@ class Processing:
             ch_types="eeg",
         )
 
-        # Reconstruct signal
+        # Reconstruct signal to RAW
         self.reconstructed = mne.io.RawArray(denoised_full, info)
 
-        return self.reconstructed
+        return
