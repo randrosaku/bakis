@@ -63,7 +63,7 @@ class Model:
         self.board_control.command(command)
         self.logger.info(command["message"])
 
-    def get_db(self) -> [API.ReadDB, bool]:
+    def get_db(self) -> list[API.ReadDB, bool]:
         """Retrieves the current database configuration.
 
         Returns:

@@ -273,17 +273,15 @@ def run(
 
     instrPracticeComponents = [message, key_resp]
     for thisComponent in instrPracticeComponents:
-        thisComponent.tStart = None
-        thisComponent.tStop = None
         thisComponent.tStartRefresh = None
-        thisComponent.tStopRefresh = None
         if hasattr(thisComponent, "status"):
             thisComponent.status = NOT_STARTED
 
     # --- Run Routine "instrPractice" ---
+    routineForceEnded = not continueRoutine
     while continueRoutine:
-
         tThisFlip = win.getFutureFlipTime(clock=routineTimer)
+
         if message.status == NOT_STARTED and tThisFlip >= 0.0 - frameTolerance:
             message.status = STARTED
             message.setAutoDraw(True)
@@ -309,11 +307,13 @@ def run(
 
         if defaultKeyboard.getKeys(keyList=["escape"]):
             thisExp.status = FINISHED
+
         if thisExp.status == FINISHED or endExpNow:
             endExperiment(thisExp, win=win)
             return
 
         if not continueRoutine:
+            routineForceEnded = True
             break
         continueRoutine = False
 
@@ -331,6 +331,7 @@ def run(
             thisComponent.setAutoDraw(False)
 
     routineTimer.reset()
+    model.logger.info("Starting stimuli drawing process")
 
     blocks = data.TrialHandler(
         nReps=N_BLOCKS,
@@ -343,7 +344,6 @@ def run(
     )
     thisExp.addLoop(blocks)
     thisBlock = blocks.trialList[0]
-
     if thisBlock != None:
         for paramName in thisBlock:
             globals()[paramName] = thisBlock[paramName]
@@ -379,10 +379,7 @@ def run(
 
             trialComponents = [stimuli, target_notice, rest]
             for thisComponent in trialComponents:
-                thisComponent.tStart = None
-                thisComponent.tStop = None
                 thisComponent.tStartRefresh = None
-                thisComponent.tStopRefresh = None
                 if hasattr(thisComponent, "status"):
                     thisComponent.status = NOT_STARTED
 
@@ -394,8 +391,7 @@ def run(
             flicker_frame_count = 0
             is_visible = False
 
-            model.logger.info("Starting stimuli drawing process")
-
+            routineForceEnded = not continueRoutine
             # --- Run Routine "trial" ---
             while continueRoutine and routineTimer.getTime() < 10.0:
 
@@ -419,6 +415,7 @@ def run(
 
                     if tThisFlipGlobal > stimuli.tStartRefresh + TMAX - frameTolerance:
                         stimuli.status = FINISHED
+                        stimuli.setAutoDraw(False)
 
                     flicker_frame_count = (flicker_frame_count + 1) % frames_per_cycle
 
@@ -428,7 +425,6 @@ def run(
                     target_notice.status == NOT_STARTED
                     and tThisFlip >= 0.0 - frameTolerance
                 ):
-
                     target_notice.tStartRefresh = tThisFlipGlobal
                     target_notice.status = STARTED
                     target_notice.setAutoDraw(True)
@@ -462,6 +458,7 @@ def run(
                     return
 
                 if not continueRoutine:
+                    routineForceEnded = True
                     break
                 continueRoutine = False
                 for thisComponent in trialComponents:
@@ -480,6 +477,11 @@ def run(
                 if hasattr(thisComponent, "setAutoDraw"):
                     thisComponent.setAutoDraw(False)
 
+            if routineForceEnded:
+                routineTimer.reset()
+            else:
+                routineTimer.addTime(-10.000000)
+
         model.logger.info("Ending stimuli drawing process")
 
         # --- Prepare to start Routine "syncFeedback" ---
@@ -491,10 +493,7 @@ def run(
 
         syncFeedbackComponents = [text, key_resp_2]
         for thisComponent in syncFeedbackComponents:
-            thisComponent.tStart = None
-            thisComponent.tStop = None
             thisComponent.tStartRefresh = None
-            thisComponent.tStopRefresh = None
             if hasattr(thisComponent, "status"):
                 thisComponent.status = NOT_STARTED
 
@@ -502,10 +501,14 @@ def run(
         text.draw()
         win.flip()
 
+        sync_values = []
+
         cleaner = Processing()
 
         db = model.get_db()
-        compute = Synchronization(database=db, model=model, cleaner=cleaner)
+        compute = Synchronization(
+            database=db, model=model, cleaner=cleaner, sync_list=sync_values
+        )
         updated_res = compute.sync_results()
 
         text.text = (
@@ -544,6 +547,7 @@ def run(
                 return
 
             if not continueRoutine:
+                routineForceEnded = True
                 break
             continueRoutine = False
 
@@ -562,13 +566,6 @@ def run(
         for thisComponent in syncFeedbackComponents:
             if hasattr(thisComponent, "setAutoDraw"):
                 thisComponent.setAutoDraw(False)
-
-        if key_resp_2.keys in ["", [], None]:
-            key_resp_2.keys = None
-        blocks.addData("key_resp_2.keys", key_resp_2.keys)
-        if key_resp_2.keys != None:
-            blocks.addData("key_resp_2.rt", key_resp_2.rt)
-            blocks.addData("key_resp_2.duration", key_resp_2.duration)
         routineTimer.reset()
 
     # --- Prepare to start Routine "thanks" ---
@@ -580,10 +577,7 @@ def run(
 
     thanksComponents = [text_2, key_resp_3]
     for thisComponent in thanksComponents:
-        thisComponent.tStart = None
-        thisComponent.tStop = None
         thisComponent.tStartRefresh = None
-        thisComponent.tStopRefresh = None
 
         if hasattr(thisComponent, "status"):
             thisComponent.status = NOT_STARTED
@@ -623,6 +617,7 @@ def run(
             return
 
         if not continueRoutine:
+            routineForceEnded = True
             break
         continueRoutine = False
 

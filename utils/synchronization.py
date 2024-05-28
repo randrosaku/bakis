@@ -33,17 +33,23 @@ from config import (
 class Synchronization:
     """Performs brain synchronization calculations"""
 
-    def __init__(self, model: Model, database: tuple, cleaner: Processing) -> None:
+    def __init__(
+        self, model: Model, database: tuple, cleaner: Processing, sync_list: list
+    ) -> None:
         """Initializes synchronization calculation class
 
         Args:
             model (Model): Handles logging through BrainAccess Board API interface
             database (tuple): The experiment database
         """
+
         self._sync_value = -1
+        self._sync_list = sync_list
 
         self._db, self._db_status = database
         self._model = model
+
+        self._model.logger.info("Starting data processing process")
 
         self.init_params()
         self.get_user_devices()
@@ -58,8 +64,6 @@ class Synchronization:
         self._cleaner = cleaner
         self.update_users()
         self.epoch_data()
-
-        self._model.logger.info("Starting data processing process")
 
     def init_params(self) -> None:
         """Initializes synchronization parameters"""
@@ -157,6 +161,7 @@ class Synchronization:
 
         for raw_sub in self._mne_data:
             for device, raw_data in raw_sub.items():
+                raw_data = raw_data.resample(256)
                 events, ev_id = mne.events_from_annotations(
                     raw_data, event_id=self._params["event_dict"], verbose=False
                 )
@@ -166,7 +171,9 @@ class Synchronization:
 
                     try:
                         processed_data = self._cleaner.clean(
-                            raw=raw_data, mode=self._params["cleaning_mode"]
+                            raw=raw_data,
+                            mode=self._params["cleaning_mode"],
+                            events=current_events,
                         )
                         self._current_epochs.append(
                             {
@@ -216,6 +223,7 @@ class Synchronization:
         complex_signal = []
 
         data_array = np.array([data[participant] for participant in range(2)])
+
         hilb = signal.hilbert(data_array)
         complex_signal.append(hilb)
 
@@ -304,6 +312,8 @@ class Synchronization:
                 ]
 
                 sync = self.calculate_sync(epochs=subjects_data, parameter=parameter)
+                self._sync_list.append(sync)
+
                 self._model.logger.info(f"Calculated synchronization value: {sync}")
 
                 if RECORD:
@@ -334,4 +344,4 @@ class Synchronization:
             else:
                 df.to_csv(filename, mode="a", header=False, index=False)
 
-        return sync
+        return self._sync_list

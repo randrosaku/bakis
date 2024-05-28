@@ -13,12 +13,15 @@ class Processing:
         """Initializes Processing class object"""
         return
 
-    def clean(self, raw: mne.io.Raw, mode: str = None) -> mne.io.Raw:
+    def clean(
+        self, raw: mne.io.Raw, mode: str = None, events: np.array = None
+    ) -> mne.io.Raw:
         """Starts cleaning method based on mode configuration. If None, raw noisy data is returned
 
         Args:
             raw (mne.io.Raw): raw noisy EEG data
             mode (str): cleaning mode
+            events (np.array): current trial annotations
 
         Returns:
             self.reconstructed (mne.io.Raw): reconstructed, clean EEG signal
@@ -30,7 +33,7 @@ class Processing:
             raise Exception("Channels 'O1', 'O2', 'Fp1', and 'Fp2' are expected.")
 
         self.raw.filter(1, 40, fir_design="firwin")
-        self.raw.resample(256)
+        # self.raw.resample(256)
 
         if mode.lower() == "ica":
             self.ICA()
@@ -38,7 +41,7 @@ class Processing:
             self.ASR()
         elif mode.lower() == "bilstm":
             model = tf.keras.models.load_model("../RNN_model/models/b20-LRsch.keras")
-            self.BiLSTM(model=model)
+            self.BiLSTM(model=model, events=events)
         else:
             return self.raw
 
@@ -77,12 +80,18 @@ class Processing:
 
         return
 
-    def BiLSTM(self, model: tf.keras.Model) -> None:
+    def BiLSTM(self, model: tf.keras.Model, events: np.array) -> None:
         """Uses Bidirectional LSTM (BiLSTM) recurrent neural network for artifact removal
 
         Args:
             model (tf.keras.Model): trained recurrent neural network model
         """
+
+        tmin = events[0][0] / self.raw.info["sfreq"]
+        tmax = None
+
+        if len(events) > 1:
+            tmax = events[-1][0] / self.raw.info["sfreq"]
 
         processed_raw = self.raw.copy()
         data = processed_raw.get_data()

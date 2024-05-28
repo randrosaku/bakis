@@ -53,13 +53,13 @@ def validateInput(expInfo: dict) -> dict:
 
 
 # Development mode
-DEV = True
+DEV = False
 
 # Experiment parameters
 EXP_NAME = f'exp-{time.strftime("%Y%m%d-%H%M%S")}'
 TRIAL_LEN = 4
 FLICKER_FREQ = 12
-N_TRIALS = 2
+N_TRIALS = 4
 N_BLOCKS = 1
 
 # Hyperscanning parameters
@@ -69,8 +69,8 @@ SAMPLING_FREQ = 250
 FREQ_BANDS = {"freq_bands": [1, 40]}
 TMIN = 2
 TMAX = 4
-RECORD = False
-PROCESSING_MODE = "ICA"
+RECORD = True
+PROCESSING_MODE = "bilstm"
 
 # Psychopy parameters
 expName = "ssvep-stimuli"
